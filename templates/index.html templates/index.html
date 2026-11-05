@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📝 Task Manager Pro v3</title>
+<style>
+  :root {
+    --bg: linear-gradient(135deg, #667eea, #764ba2);
+    --card: #ffffff;
+    --text: #333;
+    --muted: #888;
+    --border: #eee;
+    --primary: #667eea;
+    --primary-hover: #5568d3;
+    --danger: #ff4757;
+    --success: #2ed573;
+    --warning: #ffa502;
+    --soft: #f4f5ff;
+    --shadow: 0 10px 40px rgba(0,0,0,.2);
+  }
+  body.dark {
+    --bg: linear-gradient(135deg, #1a1a2e, #16213e);
+    --card: #1f2937;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #374151;
+    --soft: #111827;
+    --shadow: 0 10px 40px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    padding: 20px;
+    color: var(--text);
+    transition: background .3s, color .3s;
+  }
+  .app { max-width: 950px; margin: 0 auto; }
+
+  .panel {
+    background: var(--card); border-radius: 16px; padding: 20px 25px;
+    margin-bottom: 20px; box-shadow: var(--shadow);
+    transition: background .3s;
+  }
+  header .top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 15px; flex-wrap: wrap; gap: 10px;
+  }
+  h1 { font-size: 26px; }
+  .theme-toggle {
+    background: var(--soft); border: none; padding: 8px 14px;
+    border-radius: 20px; cursor: pointer; font-size: 18px;
+    transition: .2s;
+  }
+  .theme-toggle:hover { transform: rotate(20deg) scale(1.1); }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px; margin-bottom: 15px;
+  }
+  .stat {
+    background: var(--soft); border-radius: 10px; padding: 12px; text-align: center;
+  }
+  .stat .num { font-size: 22px; font-weight: 700; color: var(--primary); }
+  .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .stat.overdue .num { color: var(--danger); }
+  .stat.done .num { color: var(--success); }
+  .stat.today .num { color: var(--warning); }
+
+  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .progress-bar > div {
+    height: 100%; background: linear-gradient(90deg, #667eea, #2ed573);
+    transition: width .3s;
+  }
+  .progress-label { font-size: 12px; color: var(--muted); margin-top: 5px; text-align: right; }
+
+  .add-form { display: grid; gap: 10px; }
+  .add-form input, .add-form textarea, .add-form select {
+    width: 100%; padding: 10px 12px; border: 2px solid var(--border);
+    border-radius: 8px; font-size: 14px; outline: none; font-family: inherit;
+    background: var(--card); color: var(--text); transition: .2s;
+  }
+  .add-form input:focus, .add-form textarea:focus, .add-form select:focus {
+    border-color: var(--primary);
+  }
+  .add-form textarea { resize: vertical; min-height: 50px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .btn {
+    padding: 10px 20px; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 14px; font-weight: 600; transition: .2s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+  .btn-secondary { background: var(--soft); color: var(--text); }
+  .btn-secondary:hover { filter: brightness(.95); }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:hover { filter: brightness(.9); }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+  .filter-btn {
+    padding: 6px 14px; border: 2px solid var(--border); background: var(--card);
+    color: var(--text); border-radius: 20px; cursor: pointer; font-size: 13px;
+    transition: .2s;
+  }
+  .filter-btn:hover { border-color: var(--primary); }
+  .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  .categories-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .cat-chip {
+    padding: 4px 10px; background: var(--soft); border-radius: 12px;
+    font-size: 12px; cursor: pointer; transition: .2s;
+  }
+  .cat-chip:hover { background: var(--primary); color: white; }
+
+  .task {
+    background: var(--card); border-radius: 12px; padding: 15px 18px;
+    margin-bottom: 10px; display: flex; gap: 15px; align-items: flex-start;
+    box-shadow: 0 4px 15px rgba(0,0,0,.08); transition: .2s;
+    border-left: 4px solid var(--border); position: relative;
+  }
+  .task:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,.15); }
+  .task.high { border-left-color: var(--danger); }
+  .task.medium { border-left-color: var(--warning); }
+  .task.low { border-left-color: var(--success); }
+  .task.done { opacity: .55; }
+  .task.done .task-title { text-decoration: line-through; }
+  .task.pinned { background: linear-gradient(90deg, rgba(102,126,234,.08), var(--card)); }
+
+  .checkbox {
+    width: 22px; height: 22px; border: 2px solid var(--border); border-radius: 6px;
+    cursor: pointer; flex-shrink: 0; margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    transition: .2s; color: white; font-weight: 700;
+  }
+  .checkbox.checked { background: var(--success); border-color: var(--success); }
+
+  .task-body { flex: 1; cursor: pointer; }
+  .task-title { font-weight: 600; margin-bottom: 4px; }
+  .task-desc { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .task-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; color: var(--muted); }
+
+  .badge {
+    padding: 2px 8px; border-radius: 10px; background: var(--soft);
+    font-size: 11px; font-weight: 600;
+  }
+  .badge.high { background: rgba(255,71,87,.15); color: var(--danger); }
+  .badge.medium { background: rgba(255,165,2,.15); color: var(--warning); }
+  .badge.low { background: rgba(46,213,115,.15); color: var(--success); }
+  .badge.overdue { background: var(--danger); color: white; }
+  .badge.today { background: var(--warning); color: white; }
+  .badge.pinned { background: var(--primary); color: white; }
+
+  .task-actions { display: flex; gap: 4px; }
+  .icon-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 15px; padding: 4px 8px; border-radius: 6px;
+    transition: .2s; color: var(--text);
+  }
+  .icon-btn:hover { background: var(--soft); }
+  .icon-btn.delete:hover { background: rgba(255,71,87,.15); }
+  .icon-btn.pin.active { color: var(--primary); }
+
+  .empty { text-align: center; padding: 40px; color: var(--muted); }
+
+  /* Модальное окно */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: 16px; padding: 25px;
+    width: 100%; max-width: 500px; color: var(--text);
+    animation: pop .2s ease;
+  }
+  @keyframes pop {
+    from { transform: scale(.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .modal h2 { margin-bottom: 15px; font-size: 20px; }
+  .modal .add-form { display: grid; gap: 10px; margin-bottom: 15px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* Toast с undo */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: #333; color: white; padding: 12px 20px;
+    border-radius: 8px; opacity: 0; transform: translateY(20px);
+    transition: .3s; pointer-events: none; z-index: 1000;
+    display: flex; gap: 12px; align-items: center;
+    max-width: 350px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .toast .undo-btn {
+    background: rgba(255,255,255,.2); color: white; border: none;
+    padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    font-weight: 600;
+  }
+  .toast .undo-btn:hover { background: rgba(255,255,255,.3); }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+  }
+
+  /* Печать */
+  @media print {
+    body { background: white; color: black; }
+    .panel, .task { box-shadow: none; border: 1px solid #ccc; }
+    .add-form, .filters, .task-actions, .theme-toggle, .categories-bar { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="panel">
+    <div class="top">
+      <h1>📝 Task Manager Pro</h1>
+      <button class="theme-toggle" id="theme-toggle" title="Переключить тему">🌙</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat"><div class="num" id="s-total">0</div><div class="lbl">Всего</div></div>
+      <div class="stat"><div class="num" id="s-active">0</div><div class="lbl">Активных</div></div>
+      <div class="stat done"><div class="num" id="s-done">0</div><div class="lbl">Готово</div></div>
+      <div class="stat today"><div class="num" id="s-today">0</div><div class="lbl">На сегодня</div></div>
+      <div class="stat overdue"><div class="num" id="s-overdue">0</div><div class="lbl">Просрочено</div></div>
+      <div class="stat"><div class="num" id="s-week">0</div><div class="lbl">За неделю</div></div>
+    </div>
+    <div class="progress-bar"><div id="progress" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label">0% выполнено</div>
+  </header>
+
+  <div class="panel">
+    <form class="add-form" id="add-form">
+      <input type="text" id="f-title" placeholder="Что нужно сделать?" required>
+      <textarea id="f-desc" placeholder="Описание (необязательно)"></textarea>
+      <div class="form-row">
+        <select id="f-priority">
+          <option value="low">🟢 Низкий</option>
+          <option value="medium" selected>🟡 Средний</option>
+          <option value="high">🔴 Высокий</option>
+        </select>
+        <input type="text" id="f-category" placeholder="Категория" value="general">
+        <input type="date" id="f-due">
+      </div>
+      <button type="submit" class="btn btn-primary">➕ Добавить задачу</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <div class="filters">
+      <button class="filter-btn active" data-status="all">Все</button>
+      <button class="filter-btn" data-status="active">Активные</button>
+      <button class="filter-btn" data-status="done">Выполненные</button>
+      <input type="text" id="search" placeholder="🔍 Поиск..."
+             style="flex:1;min-width:150px;padding:6px 12px;border:2px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
+      <select id="sort" style="padding:6px 12px;border:2px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);">
+        <option value="created_desc">Новые сначала</option>
+        <option value="created_asc">Старые сначала</option>
+        <option value="priority">По приоритету</option>
+        <option value="due_date">По дедлайну</option>
+      </select>
+    </div>
+    <div class="categories-bar" id="categories"></div>
+    <div id="tasks"></div>
+    <div style="margin-top:15px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="btn btn-danger" id="clear-completed" style="padding:8px 14px;font-size:13px;">
+        🗑 Очистить выполненные
+      </button>
+      <button class="btn btn-secondary" id="export" style="padding:8px 14px;font-size:13px;">
+        ⬇ Экспорт JSON
+      </button>
+      <button class="btn btn-secondary" id="print" style="padding:8px 14px;font-size:13px;">
+        🖨 Печать
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно редактирования -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>✏️ Редактировать задачу</h2>
+    <div class="add-form">
+      <input type="text" id="m-title" placeholder="Название">
+      <textarea id="m-desc" placeholder="Описание"></textarea>
+      <div class="form-row">
+        <select id="m-priority">
+          <option value="low">🟢 Низкий</option>
+          <option value="medium">🟡 Средний</option>
+          <option value="high">🔴 Высокий</option>
+        </select>
+        <input type="text" id="m-category" placeholder="Категория">
+        <input type="date" id="m-due">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="m-cancel">Отмена</button>
+      <button class="btn btn-primary" id="m-save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toast-msg"></span>
+  <button class="undo-btn" id="undo-btn" style="display:none;">↩ Отменить</button>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const tasksEl = $('tasks');
+let currentStatus = 'all';
+let currentCategory = null;
+let editingId = null;
+let undoAction = null;
+
+// ---------- Тема ----------
+function applyTheme() {
+  const theme = localStorage.getItem('theme') || 'light';
+  document.body.classList.toggle('dark', theme === 'dark');
+  $('theme-toggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+$('theme-toggle').addEventListener('click', () => {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  $('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+});
+applyTheme();
+
+// ---------- Утилиты ----------
+function toast(msg, { error = false, undo = null } = {}) {
+  const t = $('toast');
+  $('toast-msg').textContent = msg;
+  t.style.background = error ? '#ff4757' : '#333';
+  const undoBtn = $('undo-btn');
+  if (undo) {
+    undoBtn.style.display = 'inline-block';
+    undoAction = undo;
+  } else {
+    undoBtn.style.display = 'none';
+    undoAction = null;
+  }
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), undo ? 5000 : 2500);
+}
+
+$('undo-btn').addEventListener('click', async () => {
+  if (!undoAction) return;
+  try {
+    await undoAction();
+    toast('↩ Восстановлено');
+    await refresh();
+  } catch (e) { toast(e.message, true); }
+  $('toast').classList.remove('show');
+});
+
+async function api(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+function isOverdue(t) {
+  if (t.done || !t.due_date) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return t.due_date < today;
+}
+function isToday(t) {
+  if (t.done || !t.due_date) return false;
+  return t.due_date === new Date().toISOString().slice(0, 10);
+}
+function fmtDate(s) {
+  if (!s) return '';
+  return new Date(s).toLocaleDateString('ru-RU');
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[c]);
+}
+
+// ---------- Загрузка ----------
+async function loadTasks() {
+  const params = new URLSearchParams();
+  if (currentStatus !== 'all') params.set('status', currentStatus);
+  if (currentCategory) params.set('category', currentCategory);
+  const search = $('search').value.trim();
+  if (search) params.set('search', search);
+  params.set('sort', $('sort').value);
+
+  try {
+    const tasks = await api('/api/tasks?' + params);
+    renderTasks(tasks);
+  } catch (e) { toast('Ошибка: ' + e.message, true); }
+}
+
+function renderTasks(tasks) {
+  if (!tasks.length) {
+    tasksEl.innerHTML = '<div class="empty">✨ Задач нет. Добавь первую!</div>';
+    return;
+  }
+  tasksEl.innerHTML = tasks.map(t => {
+    const overdue = isOverdue(t);
+    const today = isToday(t);
+    const prLabel = { low: '🟢 Низкий', medium: '🟡 Средний', high: '🔴 Высокий' }[t.priority];
+    return `
+      <div class="task ${t.priority} ${t.done ? 'done' : ''} ${t.pinned ? 'pinned' : ''}">
+        <div class="checkbox ${t.done ? 'checked' : ''}" onclick="event.stopPropagation();toggle(${t.id})">
+          ${t.done ? '✓' : ''}
+        </div>
+        <div class="task-body" onclick="openEdit(${t.id})">
+          <div class="task-title">
+            ${t.pinned ? '📌 ' : ''}${escapeHtml(t.title)}
+          </div>
+          ${t.description ? `<div class="task-desc">${escapeHtml(t.description)}</div>` : ''}
+          <div class="task-meta">
+            <span class="badge ${t.priority}">${prLabel}</span>
+            <span class="badge">🏷 ${escapeHtml(t.category)}</span>
+            ${t.due_date ? `<span class="badge ${overdue ? 'overdue' : (today ? '
